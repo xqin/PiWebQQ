@@ -9,6 +9,7 @@ PASS = "PASS"
 
 ClientID = 8534174
 APPID = 1003903
+PSessionID = ''
 
 def getEncPass(q, p, v):
   m = md5.new(p).digest() + ("%0.16X" % q).decode('hex')
@@ -103,71 +104,71 @@ logging.info('PTWebQQ: {0}'.format(PTWebQQ))
 
 html = http.Get(html[5])
 
-
-
-html = http.Post('http://d.web2.qq.com/channel/login2', (
-  ('r', '{{"status":"online","ptwebqq":"{0}","passwd_sig":"","clientid":"{1}","psessionid":null}}'.format(PTWebQQ, ClientID)),
-  ('clientid', ClientID),
-  ('psessionid', 'null')
-), 'http://s.web2.qq.com/proxy.html?v=20110412001&callback=1&id=3')
-
-logging.debug(html)
-
-ret = json.loads(html)
-
-if ret['retcode'] != 0:
-  quit()
-
-
-VFWebQQ = ret['result']['vfwebqq']
-PSessionID = ret['result']['psessionid']
-
-logging.info('Login success')
-
-Referer = 'http://d.web2.qq.com/proxy.html?v=20110331002&callback=1&id=2'
-MsgID = 38200000
-
-E = 0
 while 1:
-  html = http.Post('http://d.web2.qq.com/channel/poll2', (
-    ('r', '{{"clientid":"{0}","psessionid":"{1}","key":0,"ids":[]}}'.format(ClientID, PSessionID)),
+  html = http.Post('http://d.web2.qq.com/channel/login2', (
+    ('r', '{{"status":"online","ptwebqq":"{0}","passwd_sig":"","clientid":"{1}","psessionid":""{2}""}}'.format(PTWebQQ, ClientID, PSessionID)),
     ('clientid', ClientID),
-    ('psessionid', PSessionID)
-  ), Referer)
+    ('psessionid', 'null')
+  ), 'http://s.web2.qq.com/proxy.html?v=20110412001&callback=1&id=3')
 
-  try:
-    ret = json.loads(html)
-  except:
-    E += 1
-    if E > 5:
-      quit()
-    time.sleep(5)
-    continue
+  logging.debug(html)
+
+  ret = json.loads(html)
+
+  if ret['retcode'] != 0:
+    quit()
+
+  VFWebQQ = ret['result']['vfwebqq']
+  PSessionID = ret['result']['psessionid']
+
+  logging.info('Login success')
+
+  Referer = 'http://d.web2.qq.com/proxy.html?v=20110331002&callback=1&id=2'
+  MsgID = 38200000
 
   E = 0
+  while 1:
+    html = http.Post('http://d.web2.qq.com/channel/poll2', (
+      ('r', '{{"clientid":"{0}","psessionid":"{1}","key":0,"ids":[]}}'.format(ClientID, PSessionID)),
+      ('clientid', ClientID),
+      ('psessionid', PSessionID)
+    ), Referer)
 
-  if ret['retcode'] != 102:
-    if ret['retcode'] == 116:
+    try:
+      ret = json.loads(html)
+    except Exception, e:
+      logging.debug(e)
+      E += 1
+      if E > 3:
+        break
+      time.sleep(2)
+      continue
+
+    E = 0
+
+    if ret['retcode'] == 102:#无消息
+      continue
+    if ret['retcode'] == 116:#更新PTWebQQ值
       PTWebQQ = ret['p']
+      continue
+    if ret['retcode'] == 0:
+      for msg in ret['result']:
+        msgType = msg['poll_type']
+        if msgType == 'message':#QQ消息
+          txt = msg['value']['content'][1]
+          logging.debug(txt)
+          if txt[0] == '#':
+              thread.start_new_thread(runCommand, (txt[1:].strip(), MsgID))
+              MsgID += 1
+          if txt[0:4] == 'exit':
+              http.Get('http://d.web2.qq.com/channel/logout2?ids=&clientid={0}&psessionid={1}'.format(ClientID, PSessionID), Referer)
+              exit()
+        elif msgType == 'kick_message':
+          logging.error(msg['value']['reason'])
+          exit()
+        elif msgType != 'input_notify':
+          logging.debug(msg)
     else:
-      if ret['retcode'] == 0:
-        for msg in ret['result']:
-          msgType = msg['poll_type']
-          if msgType == 'message':
-            txt = msg['value']['content'][1]
-            logging.debug(txt)
-            if txt[0] == '#':
-                thread.start_new_thread(runCommand, (txt[1:].strip(), MsgID))
-                MsgID += 1
-            if txt[0:4] == 'exit':
-                http.Get('http://d.web2.qq.com/channel/logout2?ids=&clientid={0}&psessionid={1}'.format(ClientID, PSessionID), Referer)
-                exit()
-          elif msgType == 'kick_message':
-            logging.error(msg['value']['reason'])
-            exit()
-          elif msgType != 'input_notify':
-            logging.debug(msg)
-      else:
-        logging.debug(ret)
+      logging.debug(ret)
 
 # vim: tabstop=2 softtabstop=2 shiftwidth=2 expandtab
