@@ -106,7 +106,7 @@ html = http.Get(html[5])
 
 while 1:
   html = http.Post('http://d.web2.qq.com/channel/login2', (
-    ('r', '{{"status":"online","ptwebqq":"{0}","passwd_sig":"","clientid":"{1}","psessionid":""{2}""}}'.format(PTWebQQ, ClientID, PSessionID)),
+    ('r', '{{"status":"online","ptwebqq":"{0}","passwd_sig":"","clientid":"{1}","psessionid":"{2}"}}'.format(PTWebQQ, ClientID, PSessionID)),
     ('clientid', ClientID),
     ('psessionid', 'null')
   ), 'http://s.web2.qq.com/proxy.html?v=20110412001&callback=1&id=3')
