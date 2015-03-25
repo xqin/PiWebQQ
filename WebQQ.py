@@ -102,22 +102,19 @@ logging.info('get sign : %s', sign)
 
 html = http.Get("https://ssl.ptlogin2.qq.com/check?pt_tea=1&uin={0}&appid={1}&js_ver=10116&js_type=0&login_sig={2}&u1=http%3A%2F%2Fweb2.qq.com%2Floginproxy.html&r=0.5331138293443659".format(QQ, APPID, sign), initUrl)
 
+logging.debug(html)
 
 html = html.split("'")
-
-logging.debug(html)
 
 if len(html) == 0:
   exit()
 
 vc = None
 
-salt = html[5]
-
 if html[1] == '1':
   logging.info('need validate code')
   http.Download("https://ssl.captcha.qq.com/getimage?aid={0}&r={1}&uin={2}".format(APPID, random.random(), QQ), "v.jpg")
-  verifysession = http.getCookie('ptvfsession')
+  verifysession = http.getCookie('verifysession')
   i = 0
   VF = '{0}/v.txt'.format(os.getcwd())
   while i < 20:
@@ -146,7 +143,7 @@ html = http.Get("https://ssl.ptlogin2.qq.com/login?u={0}&p={1}&verifycode={2}&we
 html = html.split("'")
 
 if html[1] != '0':
-  logging.error(html)
+  logging.error("'".join(html))
   quit()
 
 PTWebQQ = http.getCookie('ptwebqq')
