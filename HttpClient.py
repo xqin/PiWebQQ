@@ -20,6 +20,8 @@ class HttpClient:
       return e.read()
     except socket.timeout, e:
       return ''
+    except socket.error, e:
+      return ''
 
   def Post(self, url, data, refer=None):
     try:
@@ -31,6 +33,8 @@ class HttpClient:
       print e.read()
       return e.read()
     except socket.timeout, e:
+      return ''
+    except socket.error, e:
       return ''
 
   def Download(self, url, file):
