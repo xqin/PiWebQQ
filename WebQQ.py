@@ -59,27 +59,43 @@ def getEncPass(q, p, v):
   m = md5.new(p).digest() + ("%0.16X" % q).decode('hex')
   return md5.new(md5.new(m).hexdigest().upper() + v.upper()).hexdigest().upper()
 
-def runCommand(cmd, msgId):
-  global ClientID, PSessionID, http, Referer
+def runCommand(cmd, uin):
   ret = 'Run Command: [{0}]\n'.format(cmd)
+
   try:
-    popen_obj = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
+    popen_obj = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0, env=os.environ.copy())
     (stdout, stderr) = popen_obj.communicate()
 
     ret += stdout.strip()
     ret += '\n' + stderr.strip()
   except Exception, e:
     ret += e
-  ret = ret.replace('\\', '\\\\\\\\').replace('\t', '\\\\t').replace('\r', '\\\\r').replace('\n', '\\\\n')
-  ret = ret.replace('"', '\\\\\\"')
-  http.Post("http://d.web2.qq.com/channel/send_buddy_msg2", (
-    ('r', '{{"to":{0},"face":522,"content":"[\\"{4}\\",[\\"font\\",{{\\"name\\":\\"Arial\\",\\"size\\":\\"10\\",\\"style\\":[0,0,0],\\"color\\":\\"000000\\"}}]]","msg_id":{1},"clientid":"{2}","psessionid":"{3}"}}'.format(msg['value']['from_uin'], msgId, ClientID, PSessionID, ret)),
+
+  SendQQMsg(uin, ret)
+
+
+def SendMsg(url, id, msg, msgType):
+  global ClientID, PSessionID, http, Referer, MsgID
+  MsgID = MsgID + 1
+
+  msg = msg.replace('\\', '\\\\\\\\').replace('\t', '\\\\t').replace('\r', '\\\\r').replace('\n', '\\\\n')
+  msg = msg.replace('"', '\\\\\\"')
+
+  http.Post("http://d.web2.qq.com/channel/{0}".format(url), (
+    ('r', '{{"{5}":{0},"face":600,"content":"[\\"{4}\\",[\\"font\\",{{\\"name\\":\\"Arial\\",\\"size\\":\\"10\\",\\"style\\":[0,0,0],\\"color\\":\\"000000\\"}}]]","msg_id":{1},"clientid":"{2}","psessionid":"{3}"}}'.format(id, MsgID, ClientID, PSessionID, msg, msgType)),
     ('clientid', ClientID),
     ('psessionid', PSessionID)
   ), Referer)
 
 
-logging.basicConfig(filename='qq.log', level=logging.DEBUG, format='%(asctime)s  %(filename)s[line:%(lineno)d] %(levelname)s %(message)s', datefmt='%a, %d %b %Y %H:%M:%S')
+def SendQQMsg(uin, msg):
+  SendMsg('send_buddy_msg2', uin, msg, 'to')
+
+def SendGroupMsg(qid, msg):
+  SendMsg('send_qun_msg2', qid, msg, 'group_uin')
+
+
+logging.basicConfig(filename='qq.log', level=logging.DEBUG, format='%(asctime)s  %(filename)s[line:%(lineno)d] %(levelname)s %(message)s', datefmt='[%Y-%m-%d %H:%M:%S]')
 
 
 http = HttpClient()
@@ -182,6 +198,9 @@ while 1:
       ('psessionid', PSessionID)
     ), Referer)
 
+    if html == '':
+      continue
+
     try:
       ret = json.loads(html)
     except Exception, e:
@@ -204,15 +223,20 @@ while 1:
         msgType = msg['poll_type']
         if msgType == 'message':#QQ消息
           txt = msg['value']['content'][1]
-          logging.debug(txt)
+          logging.debug("QQ Message:" + txt)
           if txt[0] == '#':
-              thread.start_new_thread(runCommand, (txt[1:].strip(), MsgID))
-              MsgID += 1
+              thread.start_new_thread(runCommand, (txt[1:].strip(), msg['value']['from_uin']))
           if txt[0:4] == 'exit':
               http.Get('http://d.web2.qq.com/channel/logout2?ids=&clientid={0}&psessionid={1}'.format(ClientID, PSessionID), Referer)
               exit()
         elif msgType == 'sess_message':#QQ临时会话的消息
           logging.debug(msg['value']['content'][1])
+        elif msgType == 'group_message':#群消息
+          txt = msg['value']['content'][1]
+          logging.debug("Group Message:" + txt)
+        elif msgType == 'discu_message':#讨论组的消息
+          txt = msg['value']['content'][1]
+          logging.debug("Discu Message:" + txt)
         elif msgType == 'kick_message':
           logging.error(msg['value']['reason'])
           exit()
