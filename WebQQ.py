@@ -203,15 +203,14 @@ while 1:
 
     try:
       ret = json.loads(html)
+      E = 0
     except Exception, e:
       logging.debug(e)
       E += 1
-      if E > 3:
+      if E > 5:
         break
       time.sleep(2)
       continue
-
-    E = 0
 
     if ret['retcode'] == 102:#无消息
       continue
