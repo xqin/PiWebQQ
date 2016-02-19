@@ -23,3 +23,9 @@ echo "abcd" > v.txt
 
 #####2015-03-25 更新
 >因WebQQ更新登陆时密码的加密方式, 在加密时使用了RSA, 所以在使用本程序时确保你的Python中有安装 RSA(https://pypi.python.org/pypi/rsa) 模块.
+
+#####2016-02-19 更新
+>因QQ官方已经停止了WebQQ项目(仅保留了使用二维码登陆的方式), 故本仓库的代码已经不能再使用了.
+>建议使用 [SmartQQ-for-Raspberry-Pi](https://github.com/xqin/SmartQQ-for-Raspberry-Pi)
+
+
